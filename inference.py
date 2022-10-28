@@ -5,6 +5,8 @@ import json, subprocess, random, string
 from tqdm import tqdm
 from glob import glob
 import torch, face_detection
+
+from face_detection.detection.sfd.sfd_detector import SFDDetector
 from models import Wav2Lip
 import platform
 
@@ -61,6 +63,9 @@ def get_smoothened_boxes(boxes, T):
 	return boxes
 
 def face_detect(images):
+	detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
+											flip_input=False, device=device)
+
 	batch_size = args.face_det_batch_size
 	
 	while 1:
@@ -94,7 +99,7 @@ def face_detect(images):
 	if not args.nosmooth: boxes = get_smoothened_boxes(boxes, T=5)
 	results = [[image[y1: y2, x1:x2], (y1, y2, x1, x2)] for image, (x1, y1, x2, y2) in zip(images, boxes)]
 
-	# del detector
+	del detector
 	return results 
 
 def datagen(frames, mels):
@@ -271,14 +276,13 @@ def main():
 	subprocess.call(command, shell=platform.system() != 'Windows')
 
 def do_load(checkpoint_path):
-	detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
-											flip_input=False, device=device)
+	global model
+	SFDDetector.load_model(device)
 	model = load_model(checkpoint_path)
 	print("Model loaded")
-	return model, detector
 
 
 if __name__ == '__main__':
 	args = parser.parse_args()
-	model, detector = do_load(args.checkpoint_path)
+	do_load(args.checkpoint_path)
 	main()
