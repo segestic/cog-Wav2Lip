@@ -50,11 +50,6 @@ parser.add_argument('--rotate', default=False, action='store_true',
 parser.add_argument('--nosmooth', default=False, action='store_true',
 					help='Prevent smoothing face detections over a short temporal window')
 
-args = parser.parse_args()
-args.img_size = 96
-
-if os.path.isfile(args.face) and args.face.split('.')[1] in ['jpg', 'png', 'jpeg']:
-	args.static = True
 
 def get_smoothened_boxes(boxes, T):
 	for i in range(len(boxes)):
@@ -66,9 +61,6 @@ def get_smoothened_boxes(boxes, T):
 	return boxes
 
 def face_detect(images):
-	detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D, 
-											flip_input=False, device=device)
-
 	batch_size = args.face_det_batch_size
 	
 	while 1:
@@ -102,7 +94,7 @@ def face_detect(images):
 	if not args.nosmooth: boxes = get_smoothened_boxes(boxes, T=5)
 	results = [[image[y1: y2, x1:x2], (y1, y2, x1, x2)] for image, (x1, y1, x2, y2) in zip(images, boxes)]
 
-	del detector
+	# del detector
 	return results 
 
 def datagen(frames, mels):
@@ -179,6 +171,11 @@ def load_model(path):
 	return model.eval()
 
 def main():
+	args.img_size = 96
+
+	if os.path.isfile(args.face) and args.face.split('.')[1] in ['jpg', 'png', 'jpeg']:
+		args.static = True
+
 	if not os.path.isfile(args.face):
 		raise ValueError('--face argument must be a valid path to video/image file')
 
@@ -249,9 +246,6 @@ def main():
 	for i, (img_batch, mel_batch, frames, coords) in enumerate(tqdm(gen, 
 											total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
 		if i == 0:
-			model = load_model(args.checkpoint_path)
-			print ("Model loaded")
-
 			frame_h, frame_w = full_frames[0].shape[:-1]
 			out = cv2.VideoWriter('temp/result.avi', 
 									cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
@@ -276,5 +270,15 @@ def main():
 	command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'temp/result.avi', args.outfile)
 	subprocess.call(command, shell=platform.system() != 'Windows')
 
+def do_load(checkpoint_path):
+	detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
+											flip_input=False, device=device)
+	model = load_model(checkpoint_path)
+	print("Model loaded")
+	return model, detector
+
+
 if __name__ == '__main__':
+	args = parser.parse_args()
+	model, detector = do_load(args.checkpoint_path)
 	main()
