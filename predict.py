@@ -33,12 +33,6 @@ class Predictor(BasePredictor):
             description="Reduce the resolution by this factor. Sometimes, best results are obtained at 480p or 720p",
             default=1,
         ),
-        face_det_batch_size: int = Input(
-            default=16, description="Batch size for face detection"
-        ),
-        wav2lip_batch_size: int = Input(
-            default=128, description="Batch size for Wav2Lip model(s)"
-        ),
     ) -> Path:
         try:
             os.remove("results/result_voice.mp4")
@@ -58,10 +52,6 @@ class Predictor(BasePredictor):
             str(fps),
             "--resize_factor",
             str(resize_factor),
-            "--face_det_batch_size",
-            str(face_det_batch_size),
-            "--wav2lip_batch_size",
-            str(wav2lip_batch_size),
         ]
         if not smooth:
             args += ["--nosmooth"]

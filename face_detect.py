@@ -7,18 +7,19 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_detection = mp.solutions.face_detection
 
 
-def face_rect(image_cv2):
+def face_rect(images):
     with mp_face_detection.FaceDetection(
         model_selection=1, min_detection_confidence=0.5
     ) as face_detection:
-        # Convert the BGR image to RGB and process it with MediaPipe Face Detection.
-        results = face_detection.process(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB))
+        for image_cv2 in images:
+            # Convert the BGR image to RGB and process it with MediaPipe Face Detection.
+            results = face_detection.process(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB))
 
-        # Draw face detections of each face.
-        if not results.detections:
-            return None
-        for detection in results.detections:
-            return _get_bounding_rect(image_cv2, detection)
+            # Draw face detections of each face.
+            if not results.detections:
+                yield None
+            for detection in results.detections:
+                yield _get_bounding_rect(image_cv2, detection)
 
 
 def _get_bounding_rect(

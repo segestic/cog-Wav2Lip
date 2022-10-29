@@ -32,8 +32,6 @@ parser.add_argument('--fps', type=float, help='Can be specified only if input is
 parser.add_argument('--pads', nargs='+', type=int, default=[0, 10, 0, 0], 
                     help='Padding (top, bottom, left, right). Please adjust to include chin at least')
 
-parser.add_argument('--face_det_batch_size', type=int, 
-                    help='Batch size for face detection', default=16)
 parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2Lip model(s)', default=128)
 
 parser.add_argument('--resize_factor', default=1, type=int, 
@@ -68,9 +66,7 @@ def face_detect(images):
     results = []
     pady1, pady2, padx1, padx2 = args.pads
 
-    for image in images:
-        rect = face_rect(image)
-
+    for image, rect in zip(images, face_rect(images)):
         if rect is None:
             cv2.imwrite('temp/faulty_frame.jpg', image) # check this frame where the face was not detected.
             raise ValueError('Face not detected! Ensure the video contains a face in all the frames.')
