@@ -235,8 +235,8 @@ def main():
                                             total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
         if i == 0:
             frame_h, frame_w = full_frames[0].shape[:-1]
-            out = cv2.VideoWriter('temp/result.avi',
-                                    cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
+            out = cv2.VideoWriter('temp/result.mp4',
+                                    cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_w, frame_h))
 
         img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
         mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
@@ -255,8 +255,13 @@ def main():
 
     out.release()
 
-    command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'temp/result.avi', args.outfile)
-    subprocess.call(command, shell=platform.system() != 'Windows')
+    subprocess.check_call([
+        "ffmpeg", "-y",
+        "-i", "temp/result.mp4",
+        "-i", args.audio,
+        "-c:v", "copy",
+        args.outfile,
+    ])
 
 def do_load(checkpoint_path):
     global model
