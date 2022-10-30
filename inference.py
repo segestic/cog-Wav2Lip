@@ -236,7 +236,7 @@ def main():
         if i == 0:
             frame_h, frame_w = full_frames[0].shape[:-1]
             out = cv2.VideoWriter('temp/result.mp4',
-                                    cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_w, frame_h))
+                                    cv2.VideoWriter_fourcc(*'x264'), fps, (frame_w, frame_h))
 
         img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
         mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
