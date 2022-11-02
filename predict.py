@@ -6,10 +6,12 @@ from cog import BasePredictor, Input, Path
 
 import inference
 
+from time import time
+
 
 class Predictor(BasePredictor):
     def setup(self):
-        inference.do_load("wav2lip_gan.pth")
+        inference.do_load("checkpoints/wav2lip_gan.pth")
 
     def predict(
         self,
@@ -29,9 +31,9 @@ class Predictor(BasePredictor):
             description="Can be specified only if input is a static image",
             default=25.0,
         ),
-        resize_factor: int = Input(
-            description="Reduce the resolution by this factor. Sometimes, best results are obtained at 480p or 720p",
-            default=1,
+        out_height: int = Input(
+            description="Output video height. Best results are obtained at 480 or 720",
+            default=480,
         ),
     ) -> Path:
         try:
@@ -40,24 +42,20 @@ class Predictor(BasePredictor):
             pass
 
         args = [
-            "--checkpoint_path",
-            "wav2lip_gan.pth",
-            "--face",
-            str(face),
-            "--audio",
-            str(audio),
-            "--pads",
-            *pads.split(" "),
-            "--fps",
-            str(fps),
-            "--resize_factor",
-            str(resize_factor),
+            "--checkpoint_path", "checkpoints/wav2lip_gan.pth",
+            "--face", str(face),
+            "--audio", str(audio),
+            "--pads", *pads.split(" "),
+            "--fps", str(fps),
+            "--out_height", str(out_height),
         ]
         if not smooth:
             args += ["--nosmooth"]
 
         print("-> args:", " ".join(args))
         inference.args = inference.parser.parse_args(args)
+        s = time()
         inference.main()
+        print(time() - s)
 
         return Path("results/result_voice.mp4")

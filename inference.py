@@ -9,8 +9,11 @@ import torch
 from tqdm import tqdm
 
 import audio
-from face_detect import face_rect
+# from face_detect import face_rect
 from models import Wav2Lip
+
+from batch_face import RetinaFace
+from time import time
 
 parser = argparse.ArgumentParser(description='Inference code to lip-sync videos in the wild using Wav2Lip models')
 
@@ -34,10 +37,13 @@ parser.add_argument('--pads', nargs='+', type=int, default=[0, 10, 0, 0],
 
 parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2Lip model(s)', default=128)
 
-parser.add_argument('--resize_factor', default=1, type=int, 
-            help='Reduce the resolution by this factor. Sometimes, best results are obtained at 480p or 720p')
+# parser.add_argument('--resize_factor', default=1, type=int,
+#             help='Reduce the resolution by this factor. Sometimes, best results are obtained at 480p or 720p')
 
-parser.add_argument('--crop', nargs='+', type=int, default=[0, -1, 0, -1], 
+parser.add_argument('--out_height', default=480, type=int,
+            help='Output video height. Best results are obtained at 480 or 720')
+
+parser.add_argument('--crop', nargs='+', type=int, default=[0, -1, 0, -1],
                     help='Crop video to a smaller region (top, bottom, left, right). Applied after resize_factor and rotate arg. ' 
                     'Useful if multiple face present. -1 implies the value will be auto-inferred based on height, width')
 
@@ -66,6 +72,8 @@ def face_detect(images):
     results = []
     pady1, pady2, padx1, padx2 = args.pads
 
+    s = time()
+
     for image, rect in zip(images, face_rect(images)):
         if rect is None:
             cv2.imwrite('temp/faulty_frame.jpg', image) # check this frame where the face was not detected.
@@ -77,6 +85,8 @@ def face_detect(images):
         x2 = min(image.shape[1], rect[2] + padx2)
 
         results.append([x1, y1, x2, y2])
+
+    print('face detect time:', time() - s)
 
     boxes = np.array(results)
     if not args.nosmooth: boxes = get_smoothened_boxes(boxes, T=5)
@@ -173,6 +183,8 @@ def main():
 
     else:
         video_stream = cv2.VideoCapture(args.face)
+        video_stream.set(cv2.CAP_PROP_FRAME_WIDTH, 256)
+        video_stream.set(cv2.CAP_PROP_FRAME_HEIGHT, 256)
         fps = video_stream.get(cv2.CAP_PROP_FPS)
 
         print('Reading video frames...')
@@ -183,8 +195,11 @@ def main():
             if not still_reading:
                 video_stream.release()
                 break
-            if args.resize_factor > 1:
-                frame = cv2.resize(frame, (frame.shape[1]//args.resize_factor, frame.shape[0]//args.resize_factor))
+
+            aspect_ratio = frame.shape[1] / frame.shape[0]
+            frame = cv2.resize(frame, (int(args.out_height * aspect_ratio), args.out_height))
+            # if args.resize_factor > 1:
+            #     frame = cv2.resize(frame, (frame.shape[1]//args.resize_factor, frame.shape[0]//args.resize_factor))
 
             if args.rotate:
                 frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
@@ -231,12 +246,14 @@ def main():
     batch_size = args.wav2lip_batch_size
     gen = datagen(full_frames.copy(), mel_chunks)
 
+    s = time()
+
     for i, (img_batch, mel_batch, frames, coords) in enumerate(tqdm(gen,
                                             total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
         if i == 0:
             frame_h, frame_w = full_frames[0].shape[:-1]
-            out = cv2.VideoWriter('temp/result.mp4',
-                                    cv2.VideoWriter_fourcc(*'x264'), fps, (frame_w, frame_h))
+            out = cv2.VideoWriter('temp/result.avi',
+                                    cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
 
         img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
         mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
@@ -255,19 +272,35 @@ def main():
 
     out.release()
 
+    print("wav2lip prediction time:", time() - s)
+
     subprocess.check_call([
         "ffmpeg", "-y",
-        "-i", "temp/result.mp4",
+        # "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
+        "-i", "temp/result.avi",
         "-i", args.audio,
-        "-c:v", "copy",
+        # "-c:v", "h264_nvenc",
         args.outfile,
     ])
 
 def do_load(checkpoint_path):
-    global model
+    global model, detector
+
     # SFDDetector.load_model(device)
+
     model = load_model(checkpoint_path)
     print("Model loaded")
+
+    detector = RetinaFace(gpu_id=0, model_path="checkpoints/mobilenet.pth", network="mobilenet")
+    # detector = RetinaFace(gpu_id=0, model_path="checkpoints/resnet50.pth", network="resnet50")
+
+def face_rect(images):
+    all_faces = detector(images)  # return faces list of all images
+    for faces in all_faces:
+        if not faces:
+            yield None
+        box, landmarks, score = faces[0]
+        yield tuple(map(int, box))
 
 
 if __name__ == '__main__':
