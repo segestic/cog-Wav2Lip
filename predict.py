@@ -8,8 +8,58 @@ import inference
 
 from time import time
 
+from functools import wraps
+import torch
 
+
+def make_mem_efficient(cls: BasePredictor):
+    if not torch.cuda.is_available():
+        return cls
+
+    old_setup = cls.setup
+    old_predict = cls.predict
+
+    @wraps(old_setup)
+    def new_setup(self, *args, **kwargs):
+        ret = old_setup(self, *args, **kwargs)
+        _move_to(self, "cpu")
+        return ret
+
+    @wraps(old_predict)
+    def new_predict(self, *args, **kwargs):
+        _move_to(self, "cuda")
+        try:
+            ret = old_predict(self, *args, **kwargs)
+        finally:
+            _move_to(self, "cpu")
+        return ret
+
+    cls.setup = new_setup
+    cls.predict = new_predict
+
+    return cls
+
+
+def _move_to(self, device):
+    try:
+        self = self.cached_models
+    except AttributeError:
+        pass
+    for attr, value in vars(self).items():
+        try:
+            value = value.to(device)
+        except AttributeError:
+            pass
+        else:
+            print(f"Moving {self.__name__}.{attr} to {device}")
+            setattr(self, attr, value)
+    torch.cuda.empty_cache()
+
+
+@make_mem_efficient
 class Predictor(BasePredictor):
+    cached_models = inference
+
     def setup(self):
         inference.do_load("checkpoints/wav2lip_gan.pth")
 

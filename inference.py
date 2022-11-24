@@ -283,16 +283,20 @@ def main():
         args.outfile,
     ])
 
-def do_load(checkpoint_path):
-    global model, detector
+model = detector = detector_model = None
 
-    # SFDDetector.load_model(device)
+def do_load(checkpoint_path):
+    global model, detector, detector_model
 
     model = load_model(checkpoint_path)
-    print("Model loaded")
 
+    # SFDDetector.load_model(device)
     detector = RetinaFace(gpu_id=0, model_path="checkpoints/mobilenet.pth", network="mobilenet")
     # detector = RetinaFace(gpu_id=0, model_path="checkpoints/resnet50.pth", network="resnet50")
+
+    detector_model = detector.model
+
+    print("Models loaded")
 
 def face_rect(images):
     all_faces = detector(images)  # return faces list of all images
