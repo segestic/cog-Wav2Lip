@@ -1,6 +1,7 @@
 # Prediction interface for Cog ⚙️
 # https://github.com/replicate/cog/blob/main/docs/python.md
 import os
+import subprocess
 
 from cog import BasePredictor, Input, Path
 
@@ -102,10 +103,32 @@ class Predictor(BasePredictor):
         if not smooth:
             args += ["--nosmooth"]
 
-        print("-> args:", " ".join(args))
+        print("-> run:", " ".join(args))
         inference.args = inference.parser.parse_args(args)
+
         s = time()
-        inference.main()
+
+        try:
+            inference.main()
+        except ValueError as e:
+            print('-> Encountered error, skipping lipsync:', e)
+
+            args = [
+                "ffmpeg", "-y",
+                # "-vsync", "0", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
+                "-stream_loop", "-1",
+                "-i", str(face),
+                "-i", str(audio),
+                "-shortest",
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                # "-c", "copy",
+                # "-c:v", "h264_nvenc",
+                "results/result_voice.mp4",
+            ]
+            print("-> run:", " ".join(args))
+            print(subprocess.check_output(args, encoding="utf-8"))
+
         print(time() - s)
 
         return Path("results/result_voice.mp4")

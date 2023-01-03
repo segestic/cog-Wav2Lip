@@ -216,9 +216,13 @@ def main():
 
     if not args.audio.endswith('.wav'):
         print('Extracting raw audio...')
-        command = 'ffmpeg -y -i {} -strict -2 {}'.format(args.audio, 'temp/temp.wav')
-
-        subprocess.call(command, shell=True)
+        # command = 'ffmpeg -y -i {} -strict -2 {}'.format(args.audio, 'temp/temp.wav')
+        # subprocess.call(command, shell=True)
+        subprocess.check_call([
+            "ffmpeg", "-y",
+            "-i", args.audio,
+            "temp/temp.wav",
+        ])
         args.audio = 'temp/temp.wav'
 
     wav = audio.load_wav(args.audio, 16000)
@@ -276,7 +280,7 @@ def main():
 
     subprocess.check_call([
         "ffmpeg", "-y",
-        # "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
+        # "-vsync", "0", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
         "-i", "temp/result.avi",
         "-i", args.audio,
         # "-c:v", "h264_nvenc",
