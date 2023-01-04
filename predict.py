@@ -120,6 +120,8 @@ class Predictor(BasePredictor):
                 "-i", str(face),
                 "-i", str(audio),
                 "-shortest",
+                "-fflags", "+shortest",
+                "-max_interleave_delta", "100M",
                 "-map", "0:v:0",
                 "-map", "1:a:0",
                 # "-c", "copy",
