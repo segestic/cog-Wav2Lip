@@ -183,8 +183,6 @@ def main():
 
     else:
         video_stream = cv2.VideoCapture(args.face)
-        video_stream.set(cv2.CAP_PROP_FRAME_WIDTH, 256)
-        video_stream.set(cv2.CAP_PROP_FRAME_HEIGHT, 256)
         fps = video_stream.get(cv2.CAP_PROP_FPS)
 
         print('Reading video frames...')
