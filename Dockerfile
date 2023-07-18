@@ -51,5 +51,7 @@ RUN pip install git+https://github.com/elliottzheng/batch-face.git@master
 # copy sources
 COPY . .
 
+ENV PYTHONUNBUFFERED=1
+
 # run cog
 CMD python3 -m cog.server.http

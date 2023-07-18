@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 import platform
 import subprocess
@@ -300,13 +301,20 @@ def do_load(checkpoint_path):
 
     print("Models loaded")
 
+
+face_batch_size = 64 * 8
+
 def face_rect(images):
-    all_faces = detector(images)  # return faces list of all images
-    for faces in all_faces:
-        if not faces:
-            yield None
-        box, landmarks, score = faces[0]
-        yield tuple(map(int, box))
+    num_batches = math.ceil(len(images) / face_batch_size)
+    prev_ret = None
+    for i in range(num_batches):
+        batch = images[i * face_batch_size: (i + 1) * face_batch_size]
+        all_faces = detector(batch)  # return faces list of all images
+        for faces in all_faces:
+            if faces:
+                box, landmarks, score = faces[0]
+                prev_ret = tuple(map(int, box))
+            yield prev_ret
 
 
 if __name__ == '__main__':
