@@ -26,6 +26,7 @@ build:
     - tqdm==4.45.0
     - numba==0.48
     - mediapipe==0.8.11
+    - gTTS==2.5.1
 
   # commands run after the environment is setup
   run:
