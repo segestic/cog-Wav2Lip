@@ -43,7 +43,6 @@ def make_mem_efficient(cls: BasePredictor):
 #g-text to speech
 import tempfile
 from gtts import gTTS
-from pathlib import Path
 from datetime import datetime
 import random
 
