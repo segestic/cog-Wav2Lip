@@ -40,6 +40,30 @@ def make_mem_efficient(cls: BasePredictor):
 
     return cls
 
+#g-text to speech
+import tempfile
+from gtts import gTTS
+from pathlib import Path
+from datetime import datetime
+import random
+
+def text_to_speech(text, language):
+    tts = gTTS(text=text, lang=language)
+    # Get the current date and time
+    current_datetime = datetime.now()
+    # Format the date and time as a string (excluding the year)
+    datetime_str = current_datetime.strftime("%m%d%H%M%S")
+    # Generate a random 5-digit number
+    random_number = random.randint(10000, 99999)
+    # Create a temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Construct the audio file name using the current date and time and the random number
+        audio_path = Path(temp_dir) / f"audio_{datetime_str}_{random_number}.mp3"
+        tts.save(audio_path)
+        print (audio_path)
+        return audio_path
+
+###
 
 def _move_to(self, device):
     try:
@@ -67,7 +91,7 @@ class Predictor(BasePredictor):
     def predict(
         self,
         face: Path = Input(description="video/image that contains faces to use"),
-        audio: Path = Input(description="video/audio file to use as raw audio source"),
+        text: str = Input(description="Text to convert to speech", default="I am a teacher"),
         pads: str = Input(
             description="Padding for the detected face bounding box.\n"
             "Please adjust to include chin at least\n"
@@ -96,9 +120,16 @@ class Predictor(BasePredictor):
         if face_ext not in [".mp4", ".mov", ".png" , ".jpg" , ".jpeg" , ".gif", ".mkv", ".webp"]:
             raise ValueError(f'Unsupported face format {face_ext!r}')
 
+        if not text.strip():
+            raise ValueError("Text input cannot be empty")
+        
+        language = "en"    
+        audio = text_to_speech(text, language)    
+        
         audio_ext = os.path.splitext(audio)[-1]
-        if audio_ext not in [".wav", ".mp3"]:
-            raise ValueError(f'Unsupported audio format {audio_ext!r}')
+        
+        if not os.path.exists(audio):
+            raise ValueError(f'Text was not converted to audio properly, contact developer')
 
         args = [
             "--checkpoint_path", "checkpoints/wav2lip_gan.pth",
