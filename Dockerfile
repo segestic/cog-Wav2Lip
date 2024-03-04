@@ -2,6 +2,8 @@ FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+RUN echo "dummy"
+
 # install python via pyenv
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	make \
@@ -41,6 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # copy to /src
 ENV WORKDIR /src
 RUN mkdir -p $WORKDIR
+RUN mkdir -p $WORKDIR/checkpoints
+
 WORKDIR $WORKDIR
 
 # install requirements
@@ -48,8 +52,16 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 RUN pip install git+https://github.com/elliottzheng/batch-face.git@master
 
+RUN echo "dummy"
+
 # copy sources
 COPY . .
+
+# make script executable 
+RUN  chmod +x ./scripts/download_models.sh
+    
+# Run the script to download models
+RUN ./scripts/download_models.sh    
 
 ENV PYTHONUNBUFFERED=1
 

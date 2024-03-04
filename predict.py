@@ -46,23 +46,38 @@ from gtts import gTTS
 from datetime import datetime
 import random
 
-def text_to_speech(text, language):
-    tts = gTTS(text=text, lang=language)
-    # Get the current date and time
-    current_datetime = datetime.now()
-    # Format the date and time as a string (excluding the year)
-    datetime_str = current_datetime.strftime("%m%d%H%M%S")
-    # Generate a random 5-digit number
-    random_number = random.randint(10000, 99999)
-    # Create a temporary directory
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Construct the audio file name using the current date and time and the random number
-        audio_path = Path(temp_dir) / f"audio_{datetime_str}_{random_number}.mp3"
-        tts.save(audio_path)
-        print (audio_path)
-        return audio_path
+#def text_to_speech(text, language):
+#    tts = gTTS(text=text, lang=language)
+#    # Get the current date and time
+#    current_datetime = datetime.now()
+#    # Format the date and time as a string (excluding the year)
+#    datetime_str = current_datetime.strftime("%m%d%H%M%S")
+#    # Generate a random 5-digit number
+#    random_number = random.randint(10000, 99999)
+#    # Create a temporary directory
+#    with tempfile.TemporaryDirectory() as temp_dir:
+#        # Construct the audio file name using the current date and time and the random number
+#        audio_path = Path(temp_dir) / f"audio_{datetime_str}_{random_number}.mp3"
+#        tts.save(audio_path)
+#        print (audio_path)
+#        return audio_path
 
 ###
+
+
+def text_to_speech(text, language):
+    global custom_path
+    custom_path = "/home/temporaryAudioDir"  # Define the custom path within the function
+    if not os.path.exists(custom_path):
+        os.makedirs(custom_path)  # Create the custom directory if it doesn't exist
+    tts = gTTS(text=text, lang=language)
+    current_datetime = datetime.now()
+    datetime_str = current_datetime.strftime("%m%d%H%M%S")
+    random_number = random.randint(10000, 99999)
+    audio_path = Path(custom_path) / f"audio_{datetime_str}_{random_number}.mp3"
+    tts.save(audio_path)
+    return audio_path, tts  # Return both audio_path and audio data
+
 
 def _move_to(self, device):
     try:
@@ -123,11 +138,11 @@ class Predictor(BasePredictor):
             raise ValueError("Text input cannot be empty")
         
         language = "en"    
-        audio = text_to_speech(text, language)    
+        audio, audio_data = text_to_speech(text, language)    
         
         audio_ext = os.path.splitext(audio)[-1]
         
-        if not os.path.exists(audio):
+        if not audio:
             raise ValueError(f'Text was not converted to audio properly, contact developer')
 
         args = [
